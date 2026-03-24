@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}Transactions - FinTracker{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Transactions</h1>
+        <p class="text-sm text-gray-500 mt-1">Record and view your incomes and expenses</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Add Transaction Form -->
+    <div class="lg:col-span-1">
+        <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl sticky top-24">
+            <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Add Record</h3>
+            </div>
+            <div class="px-6 py-5">
+                <form action="/transactions/add" method="POST" class="space-y-4">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <div class="flex rounded-md shadow-sm">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="type" value="Expense" class="peer sr-only" checked onchange="updateCategories()">
+                                <div class="text-center py-2 border border-gray-300 rounded-l-md text-sm font-medium text-gray-700 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 transition-colors">
+                                    Expense
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="type" value="Income" class="peer sr-only" onchange="updateCategories()">
+                                <div class="text-center py-2 border border-gray-300 border-x-0 text-sm font-medium text-gray-700 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-colors">
+                                    Income
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="type" value="Transfer" class="peer sr-only" onchange="updateCategories()">
+                                <div class="text-center py-2 border border-gray-300 rounded-r-md text-sm font-medium text-gray-700 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 transition-colors">
+                                    Transfer
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700">Amount (Rp)</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">Rp</span>
+                            </div>
+                            <input type="number" name="amount" id="amount" required min="0" step="1" placeholder="50000" class="appearance-none block w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="account_id" class="block text-sm font-medium text-gray-700">Source Account</label>
+                        <div class="mt-1">
+                            <select id="account_id" name="account_id" required class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm bg-white">
+                                {% for acc in accounts %}
+                                    <option value="{{ acc.id }}">{{ acc.account_name }} (Rp {{ "{:,.0f}".format(acc.balance).replace(',', '.') }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="to_account_div" style="display: none;">
+                        <label for="to_account_id" class="block text-sm font-medium text-gray-700">Destination Account</label>
+                        <div class="mt-1">
+                            <select id="to_account_id" name="to_account_id" class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm bg-white">
+                                <option value="">Select Destination...</option>
+                                {% for acc in accounts %}
+                                    <option value="{{ acc.id }}">{{ acc.account_name }} (Rp {{ "{:,.0f}".format(acc.balance).replace(',', '.') }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="category_div">
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <div class="mt-1">
+                            <select id="category" name="category" required class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm bg-white">
+                                <!-- Categories populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="note" class="block text-sm font-medium text-gray-700">Note (Optional)</label>
+                        <div class="mt-1">
+                            <input type="text" name="note" id="note" placeholder="What was this for?" class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition duration-200">
+                            Save Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="lg:col-span-2">
+        <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl">
+            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">History</h3>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                {% for tx in transactions %}
+                <li class="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 transition-colors duration-150">
+                    <div class="flex items-center mb-2 sm:mb-0">
+                        <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center {% if tx.type == 'Income' %}bg-green-100{% elif tx.type == 'Expense' %}bg-red-100{% else %}bg-blue-100{% endif %}">
+                            {% if tx.type == 'Income' %}
+                            <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                            </svg>
+                            {% elif tx.type == 'Expense' %}
+                            <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                            </svg>
+                            {% else %}
+                            <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-bold text-gray-900">{{ tx.category }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                {{ tx.account.account_name }} 
+                                {% if tx.note %}<span class="text-gray-300 mx-1">|</span> {{ tx.note }}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <div class="font-extrabold text-lg {% if tx.type == 'Income' %}text-green-600{% elif tx.type == 'Expense' %}text-red-600{% else %}text-blue-600{% endif %}">
+                            {% if tx.type == 'Income' %}+{% elif tx.type == 'Expense' %}-{% endif %} Rp {{ "{:,.0f}".format(tx.amount).replace(',', '.') }}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">{{ tx.date.strftime('%d %b %Y, %H:%M') }}</div>
+                    </div>
+                </li>
+                {% else %}
+                <li class="px-6 py-12 text-center text-gray-500">
+                    No transactions found. Adding your first record on the left!
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    const expenseCategories = ['Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 'Housing', 'Utilities', 'Medical', 'Other Expense'];
+    const incomeCategories = ['Salary', 'Freelance / Business', 'Investment', 'Gift', 'Other Income'];
+
+    function updateCategories() {
+        const typeInputs = document.querySelectorAll('input[name="type"]');
+        let type = 'Expense';
+        typeInputs.forEach(input => {
+            if (input.checked) type = input.value;
+        });
+        
+        const categorySelect = document.getElementById('category');
+        const categoryDiv = document.getElementById('category_div');
+        const toAccountDiv = document.getElementById('to_account_div');
+        
+        categorySelect.innerHTML = ''; // Clear current options
+        
+        if (type === 'Transfer') {
+            categoryDiv.style.display = 'none';
+            toAccountDiv.style.display = 'block';
+            document.getElementById('to_account_id').required = true;
+            categorySelect.required = false;
+        } else {
+            categoryDiv.style.display = 'block';
+            toAccountDiv.style.display = 'none';
+            document.getElementById('to_account_id').required = false;
+            categorySelect.required = true;
+            
+            const categories = type === 'Expense' ? expenseCategories : incomeCategories;
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categorySelect.appendChild(option);
+            });
+        }
+    }
+
+    // Run once on page load to set the initial options
+    document.addEventListener('DOMContentLoaded', updateCategories);
+</script>
+{% endblock %}

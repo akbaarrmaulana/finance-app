@@ -1,0 +1,233 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - FinTracker{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-1">Overview of your financial status</p>
+    </div>
+    <div class="space-x-2">
+        <a href="/transactions" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 transition-colors">
+            Add Transaction
+        </a>
+    </div>
+</div>
+
+<!-- Total Balance Card -->
+<div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl mb-8 transform transition hover:scale-[1.01] duration-300">
+    <div class="px-6 py-8">
+        <h3 class="text-lg leading-6 font-medium text-gray-500">Total Net Worth</h3>
+        <div class="mt-2 text-5xl font-extrabold text-gray-900 tracking-tight">
+            Rp {{ "{:,.0f}".format(total_balance).replace(',', '.') }}
+        </div>
+    </div>
+</div>
+
+<!-- linked Accounts Overview -->
+<div class="mb-8">
+    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">My Accounts</h3>
+    <div class="flex gap-4 overflow-x-auto pb-4">
+        {% for acc in accounts %}
+        <div class="glass-panel min-w-[220px] p-5 rounded-2xl shadow-sm border-l-4 border-brand-500 hover:-translate-y-1 transition transform duration-200">
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ acc.account_type }}</div>
+            <div class="text-lg font-bold text-gray-900 truncate mt-1">{{ acc.account_name }}</div>
+            <div class="text-xl font-extrabold text-brand-600 mt-2">Rp {{ "{:,.0f}".format(acc.balance).replace(',', '.') }}</div>
+            <a href="/accounts" class="text-xs text-gray-500 hover:text-brand-500 mt-3 inline-block font-medium">Manage &rarr;</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Date Filtering Form -->
+<h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Financial Reports</h3>
+<div class="mb-6 flex flex-wrap gap-4 items-end glass-panel p-4 rounded-xl shadow-sm border border-gray-100">
+    <form method="GET" action="/dashboard" class="flex flex-wrap items-end w-full gap-4" id="filterForm">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Filter by Account</label>
+            <select name="account_id" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                <option value="all" {% if account_id == 'all' or not account_id %}selected{% endif %}>All Accounts</option>
+                {% for acc in accounts %}
+                <option value="{{ acc.id }}" {% if account_id == acc.id|string %}selected{% endif %}>{{ acc.account_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Time Period</label>
+            <select name="period" onchange="toggleCustomDates(this)" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
+                <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
+                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+        </div>
+        
+        <div id="customDates" class="flex gap-4 items-end" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %};">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+            </div>
+            <button type="submit" class="bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 text-sm font-medium transition-colors">Apply</button>
+        </div>
+    </form>
+</div>
+<script>
+function toggleCustomDates(selectElem) {
+    const customDiv = document.getElementById('customDates');
+    if (selectElem.value === 'custom') {
+        customDiv.style.display = 'flex';
+    } else {
+        customDiv.style.display = 'none';
+        selectElem.form.submit();
+    }
+}
+</script>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+    <!-- Chart Card 1 -->
+    <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl p-6">
+        <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">Cash Flow Overview</h3>
+        <div class="relative h-64 w-full">
+            <canvas id="cashflowChart"></canvas>
+        </div>
+        <div id="noDataCashflow" class="hidden absolute inset-0 flex items-center justify-center text-gray-400">No data available for this period.</div>
+    </div>
+
+    <!-- Chart Card 2 -->
+    <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl p-6">
+        <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">Expenses by Category</h3>
+        <div class="relative h-64 w-full">
+            <canvas id="expenseChart"></canvas>
+        </div>
+        <div id="noDataExpense" class="hidden absolute inset-0 flex items-center justify-center text-gray-400">No data available for this period.</div>
+    </div>
+</div>
+
+<div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl">
+    <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
+        <a href="/transactions" class="text-sm font-medium text-brand-600 hover:text-brand-500">View all</a>
+    </div>
+    <ul class="divide-y divide-gray-100">
+        {% for tx in recent_transactions %}
+        <li class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center {% if tx.type == 'Income' %}bg-green-100{% elif tx.type == 'Expense' %}bg-red-100{% else %}bg-blue-100{% endif %}">
+                    {% if tx.type == 'Income' %}
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                    </svg>
+                    {% elif tx.type == 'Expense' %}
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                    </svg>
+                    {% else %}
+                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    {% endif %}
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-900">{{ tx.category }}</p>
+                    <p class="text-sm text-gray-500">{{ tx.date.strftime('%Y-%m-%d') }} &bull; {{ tx.account.account_name }}</p>
+                </div>
+            </div>
+            <div class="font-semibold {% if tx.type == 'Income' %}text-green-600{% elif tx.type == 'Expense' %}text-red-600{% else %}text-blue-600{% endif %}">
+                {% if tx.type == 'Income' %}+{% elif tx.type == 'Expense' %}-{% endif %} Rp {{ "{:,.0f}".format(tx.amount).replace(',', '.') }}
+            </div>
+        </li>
+        {% else %}
+        <li class="px-6 py-8 text-sm text-gray-500 text-center">No recent transactions.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script>
+    // Process transactions from Jinja for Charts
+    const txData = [
+        {% for tx in transactions %}
+        { type: "{{ tx.type }}", amount: {{ tx.amount }}, category: "{{ tx.category }}" }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let incomeTotal = 0;
+    let expenseTotal = 0;
+    const categoryTotals = {};
+
+    txData.forEach(tx => {
+        if (tx.type === 'Income') {
+            incomeTotal += tx.amount;
+        } else if (tx.type === 'Expense') {
+            expenseTotal += tx.amount;
+            if (categoryTotals[tx.category]) {
+                categoryTotals[tx.category] += tx.amount;
+            } else {
+                categoryTotals[tx.category] = tx.amount;
+            }
+        }
+    });
+
+    // Chart 1: Cashflow Doughnut
+    if (incomeTotal === 0 && expenseTotal === 0) {
+        document.getElementById('noDataCashflow').style.display = 'flex';
+    } else {
+        const ctx1 = document.getElementById('cashflowChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Income', 'Expenses'],
+                datasets: [{
+                    data: [incomeTotal, expenseTotal],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '70%'
+            }
+        });
+    }
+
+    // Chart 2: Expense Breakdown Bar Chart
+    const expenseLabels = Object.keys(categoryTotals);
+    const expenseData = Object.values(categoryTotals);
+    
+    if (expenseLabels.length === 0) {
+        document.getElementById('noDataExpense').style.display = 'flex';
+    } else {
+        const ctx2 = document.getElementById('expenseChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: expenseLabels,
+                datasets: [{
+                    label: 'Total Spent',
+                    data: expenseData,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
