@@ -11,11 +11,18 @@ from api.models import User, Account, Transaction
 from api.auth import get_password_hash, verify_password, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import timedelta
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Base dir is /api, so we need to go up one level for templates/static
+TEMPLATE_DIR = os.path.join(os.path.dirname(BASE_DIR), "templates")
+STATIC_DIR = os.path.join(os.path.dirname(BASE_DIR), "static")
+
 app = FastAPI(title="Simple Financial Tracker")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=TEMPLATE_DIR)
 
 @app.on_event("startup")
 def on_startup():
