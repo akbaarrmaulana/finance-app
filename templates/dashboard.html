@@ -1,222 +1,310 @@
 {% extends "layout.html" %}
 
-{% block title %}Dashboard - FinTracker{% endblock %}
+{% block title %}Dashboard - FinTracker Modern{% endblock %}
 
 {% block content %}
-<div class="mb-8 flex justify-between items-end">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p class="text-sm text-gray-500 mt-1">Overview of your financial status</p>
+<div class="mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
+    <div class="space-y-1">
+        <h1 class="text-4xl font-extrabold font-display tracking-tight text-gray-800 dark:text-gray-100">
+            Ringkasan
+        </h1>
+        <p class="text-brand-600 font-medium tracking-wide">Pantau Kondisi Keuangan Anda</p>
     </div>
-    <div class="space-x-2">
-        <a href="/transactions" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 transition-colors">
-            Add Transaction
-        </a>
-    </div>
-</div>
-
-<!-- Total Balance Card -->
-<div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl mb-8 transform transition hover:scale-[1.01] duration-300">
-    <div class="px-6 py-8">
-        <h3 class="text-lg leading-6 font-medium text-gray-500">Total Net Worth</h3>
-        <div class="mt-2 text-5xl font-extrabold text-gray-900 tracking-tight">
-            Rp {{ "{:,.0f}".format(total_balance).replace(',', '.') }}
-        </div>
+    <div class="flex gap-3">
+        <button onclick="document.getElementById('addTxModal').classList.remove('hidden')" class="btn-futuristic h-12 px-6 rounded-xl flex items-center justify-center font-bold text-sm shadow-neon text-white">
+            Catat Transaksi
+        </button>
     </div>
 </div>
 
-<!-- linked Accounts Overview -->
-<div class="mb-8">
-    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">My Accounts</h3>
-    <div class="flex gap-4 overflow-x-auto pb-4">
-        {% for acc in accounts %}
-        <div class="glass-panel min-w-[220px] p-5 rounded-2xl shadow-sm border-l-4 border-brand-500 hover:-translate-y-1 transition transform duration-200">
-            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ acc.account_type }}</div>
-            <div class="text-lg font-bold text-gray-900 truncate mt-1">{{ acc.account_name }}</div>
-            <div class="text-xl font-extrabold text-brand-600 mt-2">Rp {{ "{:,.0f}".format(acc.balance).replace(',', '.') }}</div>
-            <a href="/accounts" class="text-xs text-gray-500 hover:text-brand-500 mt-3 inline-block font-medium">Manage &rarr;</a>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Date Filtering Form -->
-<h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Financial Reports</h3>
-<div class="mb-6 flex flex-wrap gap-4 items-end glass-panel p-4 rounded-xl shadow-sm border border-gray-100">
-    <form method="GET" action="/dashboard" class="flex flex-wrap items-end w-full gap-4" id="filterForm">
-        <div class="flex-1 min-w-[200px]">
-            <label class="block text-xs font-medium text-gray-500 mb-1">Filter by Account</label>
-            <select name="account_id" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-                <option value="all" {% if account_id == 'all' or not account_id %}selected{% endif %}>All Accounts</option>
-                {% for acc in accounts %}
-                <option value="{{ acc.id }}" {% if account_id == acc.id|string %}selected{% endif %}>{{ acc.account_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="flex-1 min-w-[200px]">
-            <label class="block text-xs font-medium text-gray-500 mb-1">Time Period</label>
-            <select name="period" onchange="toggleCustomDates(this)" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-                <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
-                <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
-                <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
-                <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
-                <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
-                <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
-            </select>
+<!-- Main Balance Card (Glassmorphism) -->
+<div class="glass-card shadow-xl rounded-3xl mb-12 p-8 border border-gray-200/50 dark:border-white/10 group hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden bg-white/40 dark:bg-black/20">
+    <!-- Abstract background glow -->
+    <div class="absolute -top-24 -right-24 w-64 h-64 bg-brand-400/20 blur-[100px] rounded-full group-hover:bg-brand-500/30 transition-all"></div>
+    
+    <div class="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div class="space-y-4">
+            <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-gray-500">Total Saldo Terkini</h3>
+            <div class="text-5xl md:text-6xl font-extrabold font-display tracking-tight text-gray-900 dark:text-white flex items-baseline gap-2">
+                <span class="text-2xl font-medium text-brand-600">Rp</span>
+                {{ "{:,.0f}".format(total_balance).replace(',', '.') }}
+            </div>
         </div>
         
-        <div id="customDates" class="flex gap-4 items-end" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %};">
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-                <input type="date" name="start_date" value="{{ start_date }}" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-                <input type="date" name="end_date" value="{{ end_date }}" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-            </div>
-            <button type="submit" class="bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700 text-sm font-medium transition-colors">Apply</button>
-        </div>
-    </form>
-</div>
-<script>
-function toggleCustomDates(selectElem) {
-    const customDiv = document.getElementById('customDates');
-    if (selectElem.value === 'custom') {
-        customDiv.style.display = 'flex';
-    } else {
-        customDiv.style.display = 'none';
-        selectElem.form.submit();
-    }
-}
-</script>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-    <!-- Chart Card 1 -->
-    <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl p-6">
-        <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">Cash Flow Overview</h3>
-        <div class="relative h-64 w-full">
-            <canvas id="cashflowChart"></canvas>
-        </div>
-        <div id="noDataCashflow" class="hidden absolute inset-0 flex items-center justify-center text-gray-400">No data available for this period.</div>
-    </div>
-
-    <!-- Chart Card 2 -->
-    <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl p-6">
-        <h3 class="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">Expenses by Category</h3>
-        <div class="relative h-64 w-full">
-            <canvas id="expenseChart"></canvas>
-        </div>
-        <div id="noDataExpense" class="hidden absolute inset-0 flex items-center justify-center text-gray-400">No data available for this period.</div>
+    <!-- Removed Quick Stats as requested -->
     </div>
 </div>
 
-<div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl">
-    <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Transactions</h3>
-        <a href="/transactions" class="text-sm font-medium text-brand-600 hover:text-brand-500">View all</a>
+<!-- Accounts Quick Access (Responsive Grid) -->
+<div class="mb-12">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-bold font-display tracking-tight text-gray-800 dark:text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+            Daftar Tersimpan
+        </h3>
+        <a href="/accounts" class="text-xs font-bold text-brand-600 hover:text-brand-800 hover:underline uppercase tracking-widest">Kelola Semua</a>
     </div>
-    <ul class="divide-y divide-gray-100">
-        {% for tx in recent_transactions %}
-        <li class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center {% if tx.type == 'Income' %}bg-green-100{% elif tx.type == 'Expense' %}bg-red-100{% else %}bg-blue-100{% endif %}">
-                    {% if tx.type == 'Income' %}
-                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                    </svg>
-                    {% elif tx.type == 'Expense' %}
-                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                    </svg>
-                    {% else %}
-                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                    {% endif %}
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-900">{{ tx.category }}</p>
-                    <p class="text-sm text-gray-500">{{ tx.date.strftime('%Y-%m-%d') }} &bull; {{ tx.account.account_name }}</p>
-                </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto">
+        {% for acc in accounts %}
+        <div class="glass-card bg-white p-5 rounded-2xl flex flex-col justify-between hover:scale-[1.03] transition-transform cursor-pointer border-l-4 border-brand-500 min-w-[200px] shadow-sm">
+            <div class="mb-4">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{{ acc.account_type }}</div>
+                <div class="text-lg font-bold text-gray-800 truncate">{{ acc.account_name }}</div>
             </div>
-            <div class="font-semibold {% if tx.type == 'Income' %}text-green-600{% elif tx.type == 'Expense' %}text-red-600{% else %}text-blue-600{% endif %}">
-                {% if tx.type == 'Income' %}+{% elif tx.type == 'Expense' %}-{% endif %} Rp {{ "{:,.0f}".format(tx.amount).replace(',', '.') }}
+            <div class="text-xl font-bold font-display text-gray-900">
+                <span class="text-xs text-brand-600 font-medium">Rp</span> 
+                {{ "{:,.0f}".format(acc.balance).replace(',', '.') }}
             </div>
-        </li>
-        {% else %}
-        <li class="px-6 py-8 text-sm text-gray-500 text-center">No recent transactions.</li>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
+</div>
+
+<!-- Filters & Reports Section -->
+<div class="mb-12">
+    <div class="glass-card rounded-2xl p-4 sm:p-6 mb-8 border-brand-500/10 shadow-sm bg-white/50">
+        <form method="GET" action="/dashboard" class="flex flex-col lg:flex-row lg:items-end gap-6" id="filterForm">
+            <div class="flex-1 space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest">Sumber Dana</label>
+                <select name="account_id" onchange="this.form.submit()" class="w-full bg-white/60 border border-brand-500/20 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-sm text-gray-800 transition-all font-medium">
+                    <option value="all" {% if account_id == 'all' or not account_id %}selected{% endif %}>Semua Akun</option>
+                    {% for acc in accounts %}
+                    <option value="{{ acc.id }}" {% if account_id == acc.id|string %}selected{% endif %}>{{ acc.account_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex-1 space-y-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest">Periode Transaksi</label>
+                <select name="period" onchange="toggleCustomDates(this)" class="w-full bg-white/60 border border-brand-500/20 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-sm text-gray-800 transition-all font-medium">
+                    <option value="today" {% if period == 'today' %}selected{% endif %}>Hari Ini</option>
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>Minggu Ini</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>Bulan Ini</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>Tahun Ini</option>
+                    <option value="all" {% if period == 'all' %}selected{% endif %}>Semua Waktu</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Pilih Tanggal</option>
+                </select>
+            </div>
+
+            <div id="customDates" class="flex-1 flex gap-4" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %};">
+                <div class="flex-1 space-y-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest">Mulai</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="w-full bg-white/60 border border-brand-500/20 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-sm text-gray-800 font-medium">
+                </div>
+                <div class="flex-1 space-y-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest">Sampai</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="w-full bg-white/60 border border-brand-500/20 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-sm text-gray-800 font-medium">
+                </div>
+                <button type="submit" class="btn-futuristic h-12 px-6 rounded-xl self-end text-sm font-bold shadow-neon text-white flex-shrink-0">Terapkan</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Charts Layout (Responsive Stack/Side-by-side) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-fit lg:h-96 mb-12">
+        <div class="glass-card rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center relative min-h-[300px] bg-white/50">
+            <h3 class="absolute top-6 left-6 text-xs font-bold uppercase tracking-widest text-gray-500">Distribusi Keuangan</h3>
+            <div class="w-full h-full max-h-64 mt-8">
+                <canvas id="cashflowChart"></canvas>
+            </div>
+            <div id="noDataCashflow" class="hidden inset-0 flex items-center justify-center text-gray-500 text-sm italic italic">Menunggu data transaksi...</div>
+        </div>
+        <div class="glass-card rounded-3xl p-6 sm:p-8 flex flex-col relative min-h-[300px] bg-white/50">
+            <h3 class="absolute top-6 left-6 text-xs font-bold uppercase tracking-widest text-gray-500">Rincian Pengeluaran</h3>
+            <div class="w-full h-full max-h-64 mt-8">
+                <canvas id="expenseChart"></canvas>
+            </div>
+            <div id="noDataExpense" class="hidden inset-0 flex items-center justify-center text-gray-500 text-sm italic italic">Tidak ada pengeluaran di periode ini.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity (Modern List) -->
+<div class="glass-card rounded-3xl overflow-hidden border border-brand-500/10 shadow-lg bg-white/70">
+    <div class="px-8 py-6 border-b border-brand-500/10 flex justify-between items-center bg-white/40">
+        <h3 class="text-xl font-bold font-display tracking-tight text-gray-800">Aktivitas Terakhir</h3>
+        <a href="/transactions" class="text-xs font-bold text-brand-500 hover:text-brand-800 transition-colors flex items-center gap-1 uppercase tracking-widest">
+            Lihat Semua
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">
+                <tr>
+                    <th class="px-8 py-4">Kategori Transaksi</th>
+                    <th class="px-8 py-4">Sumber Akun</th>
+                    <th class="px-8 py-4">Tanggal</th>
+                    <th class="px-8 py-4 text-right">Nominal (Rp)</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for tx in recent_transactions %}
+                <tr class="hover:bg-white/80 transition-colors group">
+                    <td class="px-8 py-5">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center {% if tx.type == 'Income' %}bg-green-50 text-green-500{% elif tx.type == 'Expense' %}bg-red-50 text-red-500{% else %}bg-brand-50 text-brand-600{% endif %}">
+                                {% if tx.type == 'Income' %}<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                {% elif tx.type == 'Expense' %}<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"/></svg>
+                                {% else %}<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-gray-800 group-hover:text-brand-600 transition-colors">{{ tx.category }}</div>
+                                <div class="text-[10px] text-gray-500 truncate max-w-[150px] opacity-80">{{ tx.note or 'Tidak ada catatan' }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-8 py-5 text-sm font-medium text-gray-600">{{ tx.account.account_name }}</td>
+                    <td class="px-8 py-5 text-sm text-gray-500 font-medium">{{ tx.date.strftime('%d %B %Y') }}</td>
+                    <td class="px-8 py-5 text-right">
+                        <div class="text-lg font-bold font-display {% if tx.type == 'Income' %}text-green-500{% elif tx.type == 'Expense' %}text-red-500{% else %}text-brand-600{% endif %}">
+                            {% if tx.type == 'Income' %}+{% elif tx.type == 'Expense' %}-{% endif %} {{ "{:,.0f}".format(tx.amount).replace(',', '.') }}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-8 py-12 text-center text-sm text-gray-500 italic">Belum ada data transaksi. Mulai dengan mencatat pengeluaran Anda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Add Transaction Modal for Dashboard -->
+<div id="addTxModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="glass-card bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 sm:p-10 border border-gray-100 relative z-10 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-bold font-display tracking-tight text-gray-800">Catat Transaksi</h2>
+            <button onclick="document.getElementById('addTxModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-800 transition-colors">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+            </button>
+        </div>
+
+        <form action="/transactions/add" method="POST" class="space-y-5">
+            <input type="hidden" name="source" value="dashboard">
+            
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Jenis Transaksi</label>
+                <div class="flex rounded-xl overflow-hidden border border-brand-500/20 bg-gray-50 p-1">
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="type" value="Expense" class="peer sr-only" checked>
+                        <div class="peer-checked:bg-white peer-checked:shadow-sm peer-checked:text-brand-600 text-gray-500 text-sm font-bold py-2 rounded-lg transition-all">Pengeluaran</div>
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer hidden">
+                        <!-- Transfer hidden from dashboard shortcut to simplify UI -->
+                        <input type="radio" name="type" value="Transfer" class="peer sr-only">
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="type" value="Income" class="peer sr-only">
+                        <div class="peer-checked:bg-white peer-checked:shadow-sm peer-checked:text-brand-600 text-gray-500 text-sm font-bold py-2 rounded-lg transition-all">Pemasukan</div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Kategori</label>
+                    <input type="text" name="category" required placeholder="Cth: Makanan, Gaji, dll" class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all text-sm font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Nominal (Rp)</label>
+                    <input type="number" step="0.01" name="amount" required placeholder="0" class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Pilih Dompet</label>
+                    <select name="account_id" required class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium text-sm">
+                        {% for acc in accounts %}
+                        <option value="{{ acc.id }}">{{ acc.account_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Catatan (Opsional)</label>
+                <input type="text" name="note" placeholder="Deskripsi singkat" class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all text-sm font-medium">
+            </div>
+
+            <button type="submit" class="w-full btn-futuristic text-white py-3 rounded-xl font-bold md:text-lg shadow-neon transform active:scale-95 transition-all mt-6">
+                Simpan Transaksi
+            </button>
+        </form>
+    </div>
 </div>
 
 <script>
-    // Process transactions from Jinja for Charts
+    function toggleCustomDates(selectElem) {
+        const customDiv = document.getElementById('customDates');
+        if (selectElem.value === 'custom') {
+            customDiv.classList.remove('hidden');
+            customDiv.classList.add('flex');
+        } else {
+            customDiv.classList.add('hidden');
+            customDiv.classList.remove('flex');
+            selectElem.form.submit();
+        }
+    }
+
+    // Chart processing
     const txData = [
         {% for tx in transactions %}
         { type: "{{ tx.type }}", amount: {{ tx.amount }}, category: "{{ tx.category }}" }{% if not loop.last %},{% endif %}
         {% endfor %}
     ];
 
-    let incomeTotal = 0;
-    let expenseTotal = 0;
+    let incomeTotal = 0, expenseTotal = 0;
     const categoryTotals = {};
-
     txData.forEach(tx => {
-        if (tx.type === 'Income') {
-            incomeTotal += tx.amount;
-        } else if (tx.type === 'Expense') {
+        if (tx.type === 'Income') incomeTotal += tx.amount;
+        else if (tx.type === 'Expense') {
             expenseTotal += tx.amount;
-            if (categoryTotals[tx.category]) {
-                categoryTotals[tx.category] += tx.amount;
-            } else {
-                categoryTotals[tx.category] = tx.amount;
-            }
+            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
         }
     });
 
-    // Chart 1: Cashflow Doughnut
-    if (incomeTotal === 0 && expenseTotal === 0) {
-        document.getElementById('noDataCashflow').style.display = 'flex';
-    } else {
-        const ctx1 = document.getElementById('cashflowChart').getContext('2d');
-        new Chart(ctx1, {
+    // Chart 1
+    if (incomeTotal > 0 || expenseTotal > 0) {
+        new Chart(document.getElementById('cashflowChart').getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Income', 'Expenses'],
+                labels: ['Input', 'Output'],
                 datasets: [{
                     data: [incomeTotal, expenseTotal],
-                    backgroundColor: ['#10b981', '#ef4444'],
+                    backgroundColor: ['#6366f1', '#ef4444'],
                     borderWidth: 0,
-                    hoverOffset: 4
+                    hoverOffset: 12
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                cutout: '70%'
+                plugins: { 
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } } 
+                },
+                cutout: '75%'
             }
         });
-    }
+    } else { document.getElementById('noDataCashflow').classList.remove('hidden'); }
 
-    // Chart 2: Expense Breakdown Bar Chart
-    const expenseLabels = Object.keys(categoryTotals);
-    const expenseData = Object.values(categoryTotals);
-    
-    if (expenseLabels.length === 0) {
-        document.getElementById('noDataExpense').style.display = 'flex';
-    } else {
-        const ctx2 = document.getElementById('expenseChart').getContext('2d');
-        new Chart(ctx2, {
+    // Chart 2
+    const expLabels = Object.keys(categoryTotals);
+    if (expLabels.length > 0) {
+        new Chart(document.getElementById('expenseChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: expenseLabels,
+                labels: expLabels,
                 datasets: [{
-                    label: 'Total Spent',
-                    data: expenseData,
-                    backgroundColor: '#3b82f6',
-                    borderRadius: 4
+                    data: Object.values(categoryTotals),
+                    backgroundColor: 'rgba(99, 102, 241, 0.4)',
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    borderRadius: 8
                 }]
             },
             options: {
@@ -224,10 +312,11 @@ function toggleCustomDates(selectElem) {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
                 }
             }
         });
-    }
+    } else { document.getElementById('noDataExpense').classList.remove('hidden'); }
 </script>
 {% endblock %}

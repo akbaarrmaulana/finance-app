@@ -1,84 +1,146 @@
 {% extends "layout.html" %}
 
-{% block title %}Accounts - FinTracker{% endblock %}
+{% block title %}Kelola Dompet - FinTracker Modern{% endblock %}
 
 {% block content %}
-<div class="mb-8 flex justify-between items-end">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-900">Your Accounts</h1>
-        <p class="text-sm text-gray-500 mt-1">Manage your wallets, bank accounts, and e-money</p>
+<div class="mb-12 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
+    <div class="space-y-1">
+        <h1 class="text-4xl font-extrabold font-display tracking-tight text-gray-800">
+            Daftar Dompet
+        </h1>
+        <p class="text-brand-600 font-medium tracking-wide">Kelola akun dan sumber dana Anda</p>
+    </div>
+    <div class="flex gap-3">
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')" 
+            class="btn-futuristic h-12 px-6 rounded-xl flex items-center justify-center font-bold text-sm shadow-neon text-white">
+            + Tambah Dompet
+        </button>
     </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {% for acc in accounts %}
-    <div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl p-6 relative group transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-        <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <form action="/accounts/delete/{{ acc.id }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this account? All related transactions might be deleted.');">
-                <button type="submit" class="text-red-400 hover:text-red-600">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+    <div class="glass-card p-8 rounded-3xl border border-gray-100 hover:border-brand-500/40 hover:scale-[1.02] transition-all group duration-300 relative overflow-hidden bg-white/70">
+        
+        <div class="mb-8 flex justify-between items-start">
+            <div>
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{{ acc.account_type }}</div>
+                <h3 class="text-2xl font-bold font-display text-gray-800 group-hover:text-brand-600 transition-colors">{{ acc.account_name }}</h3>
+            </div>
+            <button onclick="openEditModal({{ acc.id }}, '{{ acc.account_name|replace("'", "\\'") }}', {{ acc.balance }})" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </button>
+        </div>
+
+        <div class="space-y-2 mb-8">
+            <div class="text-xs font-medium text-gray-500">Saldo Tersedia</div>
+            <div class="text-3xl font-bold font-display text-gray-900">
+                <span class="text-sm font-medium text-brand-600">Rp</span> 
+                {{ "{:,.0f}".format(acc.balance).replace(',', '.') }}
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-gray-100 flex justify-end items-center">
+            <form action="/accounts/delete/{{ acc.id }}" method="POST" onsubmit="return confirm('Menghapus dompet ini akan menghapus semua riwayat transaksi didalamnya. Lanjutkan?')">
+                <button type="submit" class="text-red-500/80 hover:text-red-600 transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Hapus Dompet
                 </button>
             </form>
         </div>
-        
-        <div class="text-xs font-semibold uppercase tracking-wider text-brand-500 mb-1">{{ acc.account_type }}</div>
-        <h3 class="text-xl font-bold text-gray-900 mb-4">{{ acc.account_name }}</h3>
-        
-        <div class="text-sm text-gray-500 mb-1">Current Balance</div>
-        <div class="text-2xl font-extrabold text-gray-900">Rp {{ "{:,.0f}".format(acc.balance).replace(',', '.') }}</div>
     </div>
     {% else %}
-    <div class="col-span-3 py-12 text-center text-gray-500">
-        You don't have any accounts yet. Create one below to get started!
+    <div class="col-span-full py-24 glass-card rounded-3xl flex flex-col items-center justify-center text-center bg-white/50 border border-brand-500/20 shadow-sm">
+        <div class="w-16 h-16 rounded-full bg-brand-50 flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Tidak ada dompet</h3>
+        <p class="text-gray-500 text-sm mb-6">Buat dompet pertama Anda untuk mulai mencatat keuangan.</p>
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="btn-futuristic px-8 py-3 rounded-xl font-bold text-white shadow-neon">Buat Dompet</button>
     </div>
     {% endfor %}
 </div>
 
-<!-- Add Account Form -->
-<div class="glass-panel overflow-hidden shadow-sm sm:rounded-2xl max-w-lg">
-    <div class="px-6 py-5 border-b border-gray-100">
-        <h3 class="text-lg leading-6 font-medium text-gray-900">Add New Account</h3>
-    </div>
-    <div class="px-6 py-5">
-        <form action="/accounts/add" method="POST" class="space-y-4">
+<!-- Add Modal -->
+<div id="addModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 sm:p-10 border border-gray-100 relative z-10">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-bold font-display tracking-tight text-gray-800">Buat Dompet</h2>
+            <button onclick="this.closest('#addModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+            </button>
+        </div>
+
+        <form action="/accounts/add" method="POST" class="space-y-6">
             <div>
-                <label for="account_name" class="block text-sm font-medium text-gray-700">Account Name</label>
-                <div class="mt-1">
-                    <input type="text" name="account_name" id="account_name" required placeholder="e.g. BCA Personal, OVO..." class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-                </div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Nama Dompet</label>
+                <input type="text" name="account_name" required placeholder="Cth: Rekening BSI"
+                    class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium text-sm">
             </div>
-            
+
             <div>
-                <label for="account_type" class="block text-sm font-medium text-gray-700">Account Type</label>
-                <div class="mt-1">
-                    <select id="account_type" name="account_type" required class="appearance-none block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-                        <option value="Bank">Bank Account</option>
-                        <option value="Cash">Cash / Wallet</option>
-                        <option value="E-Money">E-Money / Digital Wallet</option>
-                        <option value="Credit Card">Credit Card</option>
-                        <option value="Investment">Investment</option>
-                    </select>
-                </div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Jenis Dompet</label>
+                <select name="account_type" class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium text-sm">
+                    <option value="Savings">Rekening Tabungan</option>
+                    <option value="Investments">Investasi</option>
+                    <option value="Cash/Pocket">Dompet Digital / Tunai</option>
+                    <option value="Assets">Aset Lainnya</option>
+                </select>
             </div>
-            
+
             <div>
-                <label for="initial_balance" class="block text-sm font-medium text-gray-700">Initial Balance (Rp)</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="text-gray-500 sm:text-sm">Rp</span>
-                    </div>
-                    <input type="number" name="initial_balance" id="initial_balance" value="0" step="1" class="appearance-none block w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-                </div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Saldo Awal (Rp)</label>
+                <input type="number" step="0.01" name="initial_balance" required placeholder="0"
+                    class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium">
             </div>
-            
-            <div class="pt-2">
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition duration-200">
-                    Create Account
-                </button>
-            </div>
+
+            <button type="submit" 
+                class="w-full btn-futuristic text-white py-4 rounded-xl font-bold text-lg shadow-neon transform active:scale-95 transition-all mt-4">
+                Simpan Dompet
+            </button>
         </form>
     </div>
 </div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 sm:p-10 border border-gray-100 relative z-10">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-bold font-display tracking-tight text-gray-800">Edit Dompet</h2>
+            <button onclick="this.closest('#editModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+            </button>
+        </div>
+
+        <form id="editForm" method="POST" class="space-y-6">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Nama Dompet</label>
+                <input type="text" id="edit_account_name" name="account_name" required
+                    class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Perbarui Saldo (Rp)</label>
+                <input type="number" step="0.01" id="edit_initial_balance" name="initial_balance" required
+                    class="w-full bg-white border border-gray-200 focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-gray-800 transition-all font-medium">
+            </div>
+
+            <button type="submit" 
+                class="w-full btn-futuristic text-white py-4 rounded-xl font-bold text-lg shadow-neon transform active:scale-95 transition-all mt-4">
+                Simpan Perubahan
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal(id, name, balance) {
+        document.getElementById('edit_account_name').value = name;
+        document.getElementById('edit_initial_balance').value = balance;
+        document.getElementById('editForm').action = "/accounts/edit/" + id;
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+</script>
 {% endblock %}

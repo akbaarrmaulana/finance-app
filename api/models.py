@@ -4,9 +4,12 @@ from sqlmodel import SQLModel, Field, Relationship
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    supabase_id: str = Field(unique=True, index=True) # UUID from Supabase Auth
     username: str = Field(unique=True, index=True)
     email: str = Field(unique=True, index=True)
-    password_hash: str
+    password_hash: Optional[str] = Field(default=None) # Keep for compatibility, but can be null
+    full_name: Optional[str] = Field(default=None)
+    profile_photo_url: Optional[str] = Field(default=None)
     
     accounts: List["Account"] = Relationship(back_populates="user")
     transactions: List["Transaction"] = Relationship(back_populates="user")

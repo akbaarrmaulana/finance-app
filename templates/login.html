@@ -1,82 +1,51 @@
 {% extends "layout.html" %}
 
-{% block title %}Login - FinTracker{% endblock %}
+{% block title %}Login - FinTracker Modern{% endblock %}
 
 {% block content %}
-<div class="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-4xl font-extrabold text-gray-900 tracking-tight">
-            Welcome back
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Or
-            <a href="/register" class="font-medium text-brand-600 hover:text-brand-500 transition-colors">
-                create a new account
-            </a>
-        </p>
-    </div>
-
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="glass-panel py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 transform transition-all duration-300 hover:shadow-2xl">
-            
-            {% if error %}
-            <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-md shadow-sm animate-pulse">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <!-- Heroicon name: solid/x-circle -->
-                        <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-red-700">
-                            {{ error }}
-                        </p>
-                    </div>
-                </div>
+<div class="flex flex-col items-center justify-center min-h-[60vh]">
+    <div class="w-full max-w-md">
+        <div class="glass-card rounded-3xl p-8 sm:p-12 shadow-2xl border border-glass-border">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold font-display tracking-tight mb-2">Welcome Back</h1>
+                <p class="text-gray-400 text-sm">Sign in to access your financial dashboard</p>
             </div>
-            {% endif %}
 
-            <form class="space-y-6" action="/login" method="POST">
+            <form action="/login" method="POST" class="space-y-6">
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">
-                        Email address
-                    </label>
-                    <div class="mt-1">
-                        <input id="email" name="email" type="email" autocomplete="email" required class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all duration-200 sm:text-sm">
-                    </div>
+                    <label for="email" class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address</label>
+                    <input type="email" name="email" id="email" required
+                        class="w-full bg-black/40 border border-glass-border focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-white transition-all duration-200"
+                        placeholder="your@email.com">
                 </div>
 
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">
-                        Password
-                    </label>
-                    <div class="mt-1">
-                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all duration-200 sm:text-sm">
-                    </div>
+                    <label for="password" class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Password</label>
+                    <input type="password" name="password" id="password" required
+                        class="w-full bg-black/40 border border-glass-border focus:border-brand-500 outline-none rounded-xl px-4 py-3 text-white transition-all duration-200"
+                        placeholder="••••••••">
                 </div>
 
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center">
-                        <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded transition duration-200">
-                        <label for="remember-me" class="ml-2 block text-sm text-gray-900">
-                            Remember me
-                        </label>
+                        <input type="checkbox" id="remember" class="w-4 h-4 rounded border-glass-border bg-black/40 text-brand-500">
+                        <label for="remember" class="ml-2 text-gray-400">Remember me</label>
                     </div>
-
-                    <div class="text-sm">
-                        <a href="#" class="font-medium text-brand-600 hover:text-brand-500 transition-colors">
-                            Forgot your password?
-                        </a>
-                    </div>
+                    <a href="#" class="text-brand-500 hover:text-brand-100 transition-colors">Forgot password?</a>
                 </div>
 
-                <div>
-                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transform transition-all duration-200 hover:scale-[1.02]">
-                        Sign in
-                    </button>
-                </div>
+                <button type="submit" 
+                    class="w-full btn-futuristic text-white py-4 rounded-xl font-bold text-lg shadow-neon transform active:scale-95 transition-all">
+                    Login Now
+                </button>
             </form>
+
+            <div class="mt-8 pt-8 border-t border-glass-border text-center">
+                <p class="text-sm text-gray-400 font-medium">
+                    Don't have an account? 
+                    <a href="/register" class="text-brand-500 hover:underline">Create one</a>
+                </p>
+            </div>
         </div>
     </div>
 </div>

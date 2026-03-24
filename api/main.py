@@ -8,8 +8,7 @@ from datetime import datetime, timedelta
 
 from api.database import create_db_and_tables, get_session
 from api.models import User, Account, Transaction
-from api.auth import get_password_hash, verify_password, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from datetime import timedelta
+from api.auth import sign_up as sb_sign_up, sign_in as sb_sign_in, get_supabase_user, reset_password_for_email, ACCESS_TOKEN_EXPIRE_MINUTES
 
 import os
 
@@ -18,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(os.path.dirname(BASE_DIR), "templates")
 STATIC_DIR = os.path.join(os.path.dirname(BASE_DIR), "static")
 
-app = FastAPI(title="Simple Financial Tracker")
+app = FastAPI(title="FinTracker Modern")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -34,19 +33,28 @@ def get_current_user(request: Request, session: Session = Depends(get_session)):
     if not token:
         return None
     
-    # Bearer token
     if token.startswith("Bearer "):
         token = token.split(" ")[1]
         
-    payload = decode_access_token(token)
-    if not payload:
+    sb_user = get_supabase_user(token)
+    if not sb_user:
         return None
         
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
+    # Sync with local DB user
+    statement = select(User).where(User.supabase_id == sb_user.id)
+    user = session.exec(statement).first()
+    
+    if not user:
+        # This shouldn't happen often if we sync on login, but for safety:
+        user = User(
+            supabase_id=sb_user.id,
+            email=sb_user.email,
+            username=sb_user.email.split('@')[0], # Fallback username
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
         
-    user = session.get(User, int(user_id))
     return user
 
 def get_current_user_required(request: Request, session: Session = Depends(get_session)):
@@ -75,28 +83,57 @@ async def login(
     password: str = Form(...),
     session: Session = Depends(get_session)
 ):
-    statement = select(User).where(User.email == email)
-    user = session.exec(statement).first()
-    
-    if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Invalid email or password"})
-    
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
-    
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="access_token", 
-        value=f"Bearer {access_token}", 
-        httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        samesite="lax",
-        secure=False # Set to True in production
-    )
-    return response
+    try:
+        auth_res = sb_sign_in(email, password)
+        session_data = auth_res.session
+        sb_user = auth_res.user
+        
+        # Check if login needs email confirmation
+        if not sb_user:
+            return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Login failed."})
+
+        # Sync local user
+        # 1. Try matching by supabase_id
+        statement = select(User).where(User.supabase_id == sb_user.id)
+        local_user = session.exec(statement).first()
+        
+        # 2. If not found by ID, try matching by email (linking old manual account)
+        if not local_user:
+            statement_email = select(User).where(User.email == sb_user.email)
+            local_user = session.exec(statement_email).first()
+            if local_user:
+                # LINK existing account to Supabase
+                local_user.supabase_id = sb_user.id
+                session.add(local_user)
+                session.commit()
+            else:
+                # CREATE new if actually new
+                local_user = User(
+                    supabase_id=sb_user.id,
+                    email=sb_user.email,
+                    username=sb_user.email.split('@')[0]
+                )
+                session.add(local_user)
+                session.commit()
+
+        response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(
+            key="access_token", 
+            value=f"Bearer {session_data.access_token}", 
+            httponly=True,
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            samesite="lax",
+            secure=True 
+        )
+        return response
+    except Exception as e:
+        err_msg = str(e)
+        if "Email not confirmed" in err_msg:
+            err_msg = "Please confirm your email address before logging in."
+        elif "Invalid login credentials" in err_msg:
+            err_msg = "Invalid email or password."
+        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": err_msg})
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
@@ -110,25 +147,63 @@ async def register(
     password: str = Form(...),
     session: Session = Depends(get_session)
 ):
-    # Check if user exists
-    statement = select(User).where((User.email == email) | (User.username == username))
-    existing_user = session.exec(statement).first()
-    if existing_user:
-        return templates.TemplateResponse(request=request, name="register.html", context={"request": request, "error": "Email or Username already registered"})
-    
-    hashed_password = get_password_hash(password)
-    user = User(username=username, email=email, password_hash=hashed_password)
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    
-    return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    try:
+        # Sign up in Supabase
+        sb_sign_up(email, password)
+        
+        # We don't create local user yet, we wait for login confirm
+        return templates.TemplateResponse(request=request, name="login.html", context={
+            "request": request, 
+            "success": "Registration successful! Please check your email for verification link."
+        })
+    except Exception as e:
+        return templates.TemplateResponse(request=request, name="register.html", context={"request": request, "error": str(e)})
 
 @app.get("/logout")
 async def logout():
     response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("access_token")
     return response
+
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request, user: User = Depends(get_current_user_required)):
+    return templates.TemplateResponse(request=request, name="profile.html", context={"request": request, "user": user})
+
+@app.post("/profile/update")
+async def update_profile(
+    request: Request,
+    username: str = Form(None),
+    full_name: str = Form(None),
+    profile_photo_url: str = Form(None),
+    user: User = Depends(get_current_user_required),
+    session: Session = Depends(get_session)
+):
+    user.username = username or user.username
+    user.full_name = full_name
+    user.profile_photo_url = profile_photo_url
+    session.add(user)
+    session.commit()
+    return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
+
+@app.post("/profile/reset-password")
+async def reset_password(
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    try:
+        # We now use our lightweight httpx helper
+        reset_password_for_email(user.email)
+        return templates.TemplateResponse(request=request, name="profile.html", context={
+            "request": request, 
+            "user": user,
+            "success": "Password reset link sent to your email!"
+        })
+    except Exception as e:
+        return templates.TemplateResponse(request=request, name="profile.html", context={
+            "request": request, 
+            "user": user,
+            "error": str(e)
+        })
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
@@ -244,6 +319,23 @@ async def transactions_page(request: Request, user: User = Depends(get_current_u
     transactions = session.exec(select(Transaction).where(Transaction.user_id == user.id).order_by(Transaction.date.desc())).all()
     return templates.TemplateResponse(request=request, name="transactions.html", context={"request": request, "user": user, "accounts": accounts, "transactions": transactions})
 
+@app.post("/accounts/edit/{account_id}")
+async def edit_wallet(
+    request: Request,
+    account_id: int,
+    account_name: str = Form(...),
+    initial_balance: float = Form(...),
+    user: User = Depends(get_current_user_required),
+    session: Session = Depends(get_session)
+):
+    account = session.get(Account, account_id)
+    if account and account.user_id == user.id:
+        account.account_name = account_name
+        account.balance = initial_balance
+        session.add(account)
+        session.commit()
+    return RedirectResponse(url="/accounts", status_code=status.HTTP_302_FOUND)
+
 @app.post("/transactions/add")
 async def add_transaction(
     request: Request,
@@ -253,15 +345,18 @@ async def add_transaction(
     category: Optional[str] = Form(default="Transfer"),
     to_account_id: Optional[int] = Form(default=None),
     note: str = Form(default=""),
+    source: Optional[str] = Form(default=None),
     user: User = Depends(get_current_user_required),
     session: Session = Depends(get_session)
 ):
+    redirect_url = "/dashboard" if source == "dashboard" else "/transactions"
+
     if amount < 0:
         amount = abs(amount) # Ensure positive input
         
     account = session.get(Account, account_id)
     if not account or account.user_id != user.id:
-        return RedirectResponse(url="/transactions", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
         
     if type == "Transfer":
         account_to = session.get(Account, to_account_id)

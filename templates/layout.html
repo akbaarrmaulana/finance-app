@@ -3,73 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Simple Financial Tracker{% endblock %}</title>
-    <!-- Tailwind CSS via CDN for development -->
+    <title>{% block title %}FinTracker Modern{% endblock %}</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS with custom theme -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            50: '#ecfeff',
-                            100: '#cffafe',
-                            500: '#06b6d4',
-                            600: '#0891b2',
-                            900: '#164e63',
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        glass: {
+                            DEFAULT: 'rgba(255, 255, 255, 0.03)',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            hover: 'rgba(255, 255, 255, 0.06)',
                         }
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon': '0 0 15px rgba(99, 102, 241, 0.4)',
                     }
                 }
             }
         }
     </script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass-panel {
+        body {
+            background: linear-gradient(135deg, #f0f4fd 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        /* Create a pseudo-element for background colorful orbs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -10%; left: -10%; width: 50%; height: 50%;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+            z-index: -1;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -10%; right: -10%; width: 50%; height: 50%;
+            background: radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%);
+            z-index: -1;
+        }
+        .glass-card {
             background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .btn-futuristic {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-futuristic:hover {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+            transform: translateY(-1px);
+        }
+        /* Simple transition for mobile menu */
+        #mobile-menu {
+            transition: max-height 0.3s ease-out, opacity 0.2s ease;
         }
     </style>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    {% block head %}{% endblock %}
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-200 min-h-screen text-gray-800 antialiased selection:bg-brand-500 selection:text-white">
-    
-    {% if user %}
-    <!-- Navigation for logged-in users -->
-    <nav class="glass-panel sticky top-0 z-50 shadow-sm">
+<body class="font-sans antialiased">
+    <!-- Navigation -->
+    <nav class="glass-nav fixed top-0 w-full z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <span class="font-bold text-xl text-brand-600 tracking-tight">FinTracker</span>
-                    </div>
-                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        <a href="/dashboard" class="border-transparent text-gray-600 hover:border-brand-500 hover:text-brand-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Dashboard</a>
-                        <a href="/accounts" class="border-transparent text-gray-600 hover:border-brand-500 hover:text-brand-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Accounts</a>
-                        <a href="/transactions" class="border-transparent text-gray-600 hover:border-brand-500 hover:text-brand-600 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Transactions</a>
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg btn-futuristic flex items-center justify-center font-bold text-white shadow-neon">F</div>
+                    <span class="font-display text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-500 to-purple-400">FinTracker</span>
+                </div>
+                
+                {% if user %}
+                <!-- Desktop Nav -->
+                <div class="hidden md:flex items-center space-x-8 text-gray-800">
+                    <a href="/dashboard" class="text-sm font-semibold hover:text-brand-600 transition-colors">Ringkasan</a>
+                    <a href="/accounts" class="text-sm font-semibold hover:text-brand-600 transition-colors">Dompet</a>
+                    <a href="/transactions" class="text-sm font-semibold hover:text-brand-600 transition-colors">Transaksi</a>
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 py-2">
+                            <span class="text-sm font-bold opacity-90">{{ user.username }}</span>
+                            <div class="w-8 h-8 rounded-full bg-brand-600 border border-brand-500 overflow-hidden shadow-sm">
+                                {% if user.profile_photo_url %}
+                                <img src="{{ user.profile_photo_url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <div class="w-full h-full flex items-center justify-center text-xs font-bold text-white">{{ user.username[0]|upper }}</div>
+                                {% endif %}
+                            </div>
+                        </button>
+                        <!-- Dropdown -->
+                        <div class="absolute right-0 w-48 mt-1 bg-white rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100 shadow-xl overflow-hidden">
+                            <div class="py-1">
+                                <a href="/profile" class="block px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-brand-50 hover:text-brand-600">Profil Saya</a>
+                                <div class="h-px bg-gray-100 my-1"></div>
+                                <a href="/logout" class="block px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50">Keluar</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <span class="text-sm font-medium text-gray-500 mr-4">Hi, {{ user.username }}!</span>
-                    <a href="/logout" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Logout</a>
+                <!-- Mobile Toggle -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMenu()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
                 </div>
+                {% else %}
+                <div class="space-x-4">
+                    <a href="/login" class="text-sm font-medium">Login</a>
+                    <a href="/register" class="btn-futuristic px-4 py-2 rounded-lg text-sm font-bold shadow-neon">Get Started</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-md border-t border-gray-100 overflow-hidden opacity-0 text-gray-800 shadow-xl">
+            <div class="px-4 pt-2 pb-6 space-y-2">
+                <a href="/dashboard" class="block py-3 text-lg font-bold border-b border-gray-100">Ringkasan</a>
+                <a href="/accounts" class="block py-3 text-lg font-bold border-b border-gray-100">Dompet</a>
+                <a href="/transactions" class="block py-3 text-lg font-bold border-b border-gray-100">Transaksi</a>
+                <a href="/profile" class="block py-3 text-lg font-bold border-b border-gray-100">Profil</a>
+                <a href="/logout" class="block py-3 text-lg font-bold text-red-500">Keluar</a>
             </div>
         </div>
     </nav>
-    {% endif %}
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+        {% if error %}
+        <div class="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-sm flex items-center gap-3 animate-pulse">
+            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="mb-6 p-4 rounded-xl bg-green-500/20 border border-green-500/40 text-green-200 text-sm flex items-center gap-3">
+            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+            {{ success }}
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </main>
 
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                setTimeout(() => {
+                    menu.classList.add('opacity-100');
+                    menu.style.maxHeight = '400px';
+                }, 10);
+            } else {
+                menu.classList.remove('opacity-100');
+                menu.style.maxHeight = '0px';
+                setTimeout(() => menu.classList.add('hidden'), 300);
+            }
+        }
+    </script>
 </body>
 </html>
